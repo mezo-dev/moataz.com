@@ -211,6 +211,78 @@ document.addEventListener('DOMContentLoaded', () => {
 
     initTypewriter();
 
+    // --- 7b. GREETING FLIPPER (multilingual, 3D flip + squiggle draw) ---
+    function initGreetingFlipper() {
+        const greetEl = document.querySelector('.hero__intro-greet');
+        const squiggleEl = document.querySelector('.hero__intro-squiggle');
+        if (!greetEl) return;
+
+        let greetings;
+        try {
+            greetings = JSON.parse(greetEl.dataset.greetings || '[]');
+        } catch (_) {
+            return;
+        }
+        if (!Array.isArray(greetings) || greetings.length === 0) return;
+
+        const RTL_PATTERN = /[\u0590-\u08FF\uFB1D-\uFDFF\uFE70-\uFEFC]/;
+        const applyDirection = (text) => {
+            if (RTL_PATTERN.test(text)) greetEl.setAttribute('dir', 'rtl');
+            else greetEl.removeAttribute('dir');
+        };
+
+        const retriggerSquiggle = () => {
+            if (!squiggleEl) return;
+            squiggleEl.classList.remove('is-drawn');
+            // Force reflow so the animation restarts cleanly on re-add
+            void squiggleEl.getBoundingClientRect();
+            requestAnimationFrame(() => {
+                requestAnimationFrame(() => squiggleEl.classList.add('is-drawn'));
+            });
+        };
+
+        // Initial squiggle draw, timed to land after the name reveal
+        setTimeout(retriggerSquiggle, 1300);
+
+        if (prefersReducedMotion.matches) return;
+
+        let i = 0;
+        const FLIP_DURATION = 280;
+        const INTERVAL = 3500;
+        let timerId = null;
+
+        const tick = () => {
+            greetEl.classList.add('is-exiting');
+            setTimeout(() => {
+                i = (i + 1) % greetings.length;
+                const next = greetings[i];
+                greetEl.textContent = next;
+                applyDirection(next);
+                greetEl.classList.remove('is-exiting');
+                retriggerSquiggle();
+            }, FLIP_DURATION);
+        };
+
+        const start = () => {
+            if (timerId === null) timerId = setInterval(tick, INTERVAL);
+        };
+        const stop = () => {
+            if (timerId !== null) {
+                clearInterval(timerId);
+                timerId = null;
+            }
+        };
+
+        start();
+
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden) stop();
+            else start();
+        });
+    }
+
+    initGreetingFlipper();
+
     // --- 8. STAT COUNTER ANIMATION ---
     function initStatCounters() {
         const statNumbers = document.querySelectorAll('.about__stat-number[data-target]');
